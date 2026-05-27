@@ -1,0 +1,69 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle background glowing halo -->
+    <path
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"
+        android:fillColor="#151324" />
+
+    <!-- Sharp Diagonal Arrow (Gold) -->
+    <!-- Shaft -->
+    <path
+        android:pathData="M 28,80 L 76,32"
+        android:strokeColor="#eed202"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    
+    <!-- Arrow Wings / Fletching -->
+    <path
+        android:pathData="M 24,84 L 32,84 L 28,76 Z M 21,81 L 21,89 L 29,85 Z"
+        android:fillColor="#ff7e5f" />
+
+    <!-- ArrowHead -->
+    <path
+        android:pathData="M 72,28 L 84,24 L 80,36 Z"
+        android:fillColor="#ff4757" />
+
+    <!-- Vibrant Gradient Balloon -->
+    <!-- Teardrop shape centered tapers downwards -->
+    <path
+        android:pathData="M 54,22 C 70,22 80,33 80,48 C 80,64 66,75 54,75 C 42,75 28,64 28,48 C 28,33 38,22 54,22 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="72"
+                android:endY="64"
+                android:startX="40"
+                android:startY="32"
+                android:type="linear">
+                <item
+                    android:color="#ff4757"
+                    android:offset="0.0" />
+                <item
+                    android:color="#cf1b59"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Balloon Knot -->
+    <path
+        android:pathData="M 54,75 L 49,81 L 59,81 Z"
+        android:fillColor="#cf1b59" />
+
+    <!-- Thread string hanging from the knot (using #66FFFFFF for ~40% opacity white) -->
+    <path
+        android:pathData="M 54,81 Q 51,87 56,93 T 54,100"
+        android:strokeColor="#66FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- White Gloss Highlight Crescent for realistic shine (using #8CFFFFFF for ~55% opacity white) -->
+    <path
+        android:pathData="M 40,32 C 48,27 60,27 68,32 C 60,30 48,30 40,32 Z"
+        android:fillColor="#8CFFFFFF" />
+
+</vector>

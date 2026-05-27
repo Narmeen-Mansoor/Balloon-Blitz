@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Balloon Blitz</title>
+    <style>
+        /* CSS resets for full-screen immersive experience */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #030307;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #ffffff;
+            touch-action: none;
+            position: fixed;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+
+        /* Glassmorphism overlays for UI responsiveness */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            background: linear-gradient(180deg, #4A1D1D 0%, #2D1B33 50%, #0A0A0C 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: opacity 0.4s ease;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 32px;
+            padding: 32px 28px;
+            max-width: 420px;
+            width: 100%;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 2.6rem;
+            margin: 0;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #D0BCFF 50%, #F2B8B5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            text-shadow: 0px 4px 15px rgba(208, 188, 255, 0.25);
+        }
+
+        .tagline {
+            font-size: 1rem;
+            color: #F2B8B5;
+            margin: -10px 0 6px 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        p.instructions {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #E6E1E5;
+            text-align: left;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 16px;
+            border-radius: 16px;
+            border-left: 4px solid #D0BCFF;
+            width: 100%;
+        }
+
+        .highlights {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #E6E1E5;
+            margin-bottom: 8px;
+        }
+
+        .highlight-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon-bullet {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #D0BCFF;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #D0BCFF 0%, #B099F2 100%);
+            border: none;
+            color: #1C0D30;
+            font-size: 1.1rem;
+            font-weight: 800;
+            padding: 16px 28px;
+            border-radius: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 32px rgba(208, 188, 255, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 16px rgba(208, 188, 255, 0.2);
+        }
+
+        /* Top HUD elements directly styled in overlay is faster rendering */
+        #hud-container {
+            position: absolute;
+            top: 24px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0 20px;
+            z-index: 5;
+            pointer-events: none;
+            width: 100%;
+        }
+
+        .hud-panel {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-w: 70px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .hud-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .hud-value {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #ffffff;
+        }
+
+        .accent-text-level {
+            color: #D0BCFF !important;
+        }
+        
+        .accent-text-ammo {
+            color: #F2B8B5 !important;
+        }
+
+        .accent-text-score {
+            color: #FFFFFF !important;
+        }
+
+        .accent-text-time {
+            color: #F2B8B5 !important;
+            animation: pulse-red 1s infinite alternate;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.05); opacity: 0.82; }
+        }
+
+        /* Responsive scaling adjustments */
+        @media (max-height: 600px) {
+            .card {
+                padding: 18px 20px;
+                gap: 12px;
+                border-radius: 24px;
+            }
+            h1 { font-size: 2rem; }
+            p.instructions { font-size: 0.8rem; padding: 12px; }
+            .btn { padding: 12px 24px; font-size: 1rem; border-radius: 12px; }
+            .highlights { font-size: 0.75rem; margin-bottom: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Main Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Static Floating HUD -->
+        <div id="hud-container" style="top: 24px; padding: 0 16px;">
+            <!-- Left Side: Stats Group -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="hud-panel">
+                    <span class="hud-label">Score</span>
+                    <span id="hud-popped" class="hud-value" style="color: #ffffff;">0</span>
+                </div>
+                <div class="hud-panel">
+                    <span class="hud-label">Target</span>
+                    <span id="hud-target" class="hud-value" style="color: #ffffff;">5</span>
+                </div>
+                <div class="hud-panel">
+                    <span class="hud-label">Level</span>
+                    <span id="hud-level" class="hud-value accent-text-level">01</span>
+                </div>
+            </div>
+            
+            <!-- Right Side: Ammo / Timer Group -->
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                <!-- Time remaining panel -->
+                <div id="hud-time-panel" class="hud-panel" style="display: none; border-color: rgba(242, 184, 181, 0.4); background: rgba(242, 184, 181, 0.15);">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span id="hud-time" class="accent-text-time" style="font-weight: 900; font-size: 1.15rem; color: #F2B8B5;">15s</span>
+                    </div>
+                </div>
+
+                <!-- Ammo / Chances indicator -->
+                <div id="hud-ammo-panel" class="hud-panel" style="border-color: rgba(242, 184, 181, 0.4); background: rgba(242, 184, 181, 0.15); padding: 8px 14px; min-width: 80px;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <span class="hud-label" style="margin: 0; font-size: 9px; color: rgba(255, 255, 255, 0.65);">Ammo</span>
+                        <span id="hud-ammo" class="accent-text-ammo" style="font-weight: 900; font-size: 1.15rem; color: #F2B8B5;">20</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Screen Overlay -->
+        <div id="start-screen" class="overlay">
+            <div class="card">
+                <h1 id="title">BALLOON BLITZ</h1>
+                <div class="tagline">An Elegant Archery Odyssey</div>
+                <p class="instructions">
+                    Unleash high-precision arrows to burst ascending balloons. Touch and drag anywhere on screen to rotate the dynamic bow; release.
+                </p>
+                <div class="highlights">
+                    <div class="highlight-item">
+                        <span class="icon-bullet" style="background-color: #F2B8B5;"></span>
+                        <span>Missed shots consume ammo chances.</span>
+                    </div>
+                    <div class="highlight-item">
+                        <span class="icon-bullet" style="background-color: #D0BCFF;"></span>
+                        <span>Balloons floating past the top are 100% free!</span>
+                    </div>
+                    <div class="highlight-item">
+                        <span class="icon-bullet" style="background-color: #F2B8B5;"></span>
+                        <span>Look out for extreme speed-weaving and precision challenge rounds.</span>
+                    </div>
+                </div>
+                <button id="start-btn" class="btn">
+                    <span>Start Game</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen Overlay -->
+        <div id="game-over-screen" class="overlay hidden">
+            <div class="card" style="border-color: rgba(242, 184, 181, 0.45);">
+                <h1 style="background: linear-gradient(135deg, #FF9999, #F2B8B5, #e06666); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AMMO DEPLETED</h1>
+                <div class="tagline">Grounded at Level <span id="game-over-level">1</span></div>
+                <div class="highlights" style="text-align: center; font-size: 1.05rem;">
+                    <div style="width: 100%; text-align: center;">Final Score: <strong style="color: #D0BCFF; font-size: 1.35rem;"><span id="game-over-score">0</span></strong> points</div>
+                </div>
+                <button id="retry-btn" class="btn" style="background: linear-gradient(135deg, #F2B8B5 0%, #E57373 100%); color: #1C0D30; box-shadow: 0 8px 32px rgba(242, 184, 181, 0.3);">
+                    <span>Try Again</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Victory / Completion Screen Overlay -->
+        <div id="victory-screen" class="overlay hidden">
+            <div class="card" style="border-color: rgba(208, 188, 255, 0.45);">
+                <h1 style="background: linear-gradient(135deg, #ffffff, #D0BCFF, #8a6cd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">VICTORY DETECTED</h1>
+                <div class="tagline">Master of the Skies!</div>
+                <p class="instructions" style="background: rgba(208, 188, 255, 0.05); border-left-color: #D0BCFF; text-align: center;">
+                    You have successfully triumphed through all 10 challenge levels of Balloon Blitz! You are a legendary sky marksman!
+                </p>
+                <div class="highlights" style="text-align: center; font-size: 1.05rem;">
+                    <div style="width: 100%; text-align: center;">Total Final Score: <strong style="color: #F2B8B5; font-size: 1.35rem;"><span id="victory-score">0</span></strong> points</div>
+                </div>
+                <button id="replay-btn" class="btn">
+                    <span>Infinite Replay Mode</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // System Constants and Engine States
+        let canvasWidth = 800;
+        let canvasHeight = 1000;
+        let dpr = window.devicePixelRatio || 1;
+
+        // Mechanics State Variables
+        let gameState = "start"; // start, splash, playing, gameover, victory
+        let currentLevel = 1;
+        let score = 0;
+        let livesRemaining = 20; // Represents active arrow chances
+        let balloonsPoppedInLevel = 0;
+        let currentLevelTarget = 5;
+
+        // Frenzy Mechanics
+        let timerActive = false;
+        let frenzyTimeLeft = 15; // 15s timer for challenge frenzy levels (5 and 10)
+        let frenzyTimerInterval = null;
+
+        // Level Splash Screen variables
+        let levelSplashActive = false;
+        let levelSplashStartTime = 0;
+        let levelSplashDuration = 1500; // exactly 1.5 seconds representation
+        let levelTitleText = "";
+        let levelSubtitleText = "";
+
+        // Game Entities Arrays
+        let balloons = [];
+        let arrows = [];
+        let particles = []; // Confetti or explosion particles
+        let stars = []; // background stars for Level 10
+
+        // Continuous Spawning Control
+        let spawnTimeoutId = null;
+
+        // Bow Physics Center Point
+        let bowX = canvasWidth / 2;
+        let bowY = canvasHeight - 30;
+        let aimAngle = -Math.PI / 2; // vertical upwards
+        let isCharging = false;
+        let touchX = null;
+        let touchY = null;
+
+        // High Performance mobile controls tracking
+        const inputHandlers = {
+            onStartState: () => {},
+            getMousePos: (evt) => {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: (evt.clientX - rect.left) * (canvasWidth / rect.width),
+                    y: (evt.clientY - rect.top) * (canvasHeight / rect.height)
+                };
+            },
+            getTouchPos: (evt) => {
+                if (!evt.touches || evt.touches.length === 0) return null;
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: (evt.touches[0].clientX - rect.left) * (canvasWidth / rect.width),
+                    y: (evt.touches[0].clientY - rect.top) * (canvasHeight / rect.height)
+                };
+            }
+        };
+
+        // Screen Size Classes Configuration (Dynamic Resizing & HD Backup scaling)
+        function resizeCanvas() {
+            const container = document.getElementById("game-container");
+            const rect = container.getBoundingClientRect();
+            
+            // Layout scale configuration
+            canvasWidth = rect.width;
+            canvasHeight = rect.height;
+
+            dpr = window.devicePixelRatio || 1;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            ctx.scale(dpr, dpr);
+
+            // Re-anchor bow position
+            bowX = canvasWidth / 2;
+            bowY = canvasHeight - 35;
+
+            // Stars generator update (procedural constellation generation once for space levels)
+            if (stars.length === 0) {
+                stars = [];
+                for (let i = 0; i < 60; i++) {
+                    stars.push({
+                        x: Math.random() * 2000,
+                        y: Math.random() * 2000,
+                        size: Math.random() * 1.5 + 0.5,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: Math.random() * 0.05 + 0.02
+                    });
+                }
+            }
+        }
+
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        // Level Configuration Blueprints
+        const LevelBlueprints = {
+            1: { target: 5, arrows: 20, splashTitle: "Level 1: Warm-Up Round", splashSub: "Slow & steady flow. Practice your aiming guide!" },
+            2: { target: 8, arrows: 18, splashTitle: "Level 2: Twilight Valley", splashSub: "Speed slightly increased with a gentle horizontal weaving." },
+            3: { target: 10, arrows: 18, splashTitle: "Level 3: Twilight Summit", splashSub: "Advanced continuous weaves. Don't waste your chances!" },
+            4: { target: 8, arrows: 15, splashTitle: "Level 4 Challenge: Crimson Skies", splashSub: "Precision Round: Pop ONLY RED balloons. Other colors cost an arrow!" },
+            5: { target: 999, arrows: 999, splashTitle: "Level 5 Bonus: Golden Harvest", splashSub: "Frenzy Round: 15s Countdown! GOLD Balloons, rapid-fire, unlimited ammo!" },
+            6: { target: 12, arrows: 18, splashTitle: "Level 6: Midnight Summit", splashSub: "Fast speed clusters and weaving. Watch out!" },
+            7: { target: 15, arrows: 18, splashTitle: "Level 7: Starlight Ascent", splashSub: "Highly erratic and ultra speed weaves." },
+            8: { target: 10, arrows: 15, splashTitle: "Level 8 Challenge: Cobalt Eclipse", splashSub: "Precision Round: Pop ONLY BLUE balloons. Other colors cost an arrow!" },
+            9: { target: 15, arrows: 16, splashTitle: "Level 9: Nebula Drift", splashSub: "Severe custom zigzag movements. Focus your shots!" },
+            10: { target: 999, arrows: 999, splashTitle: "Level 10 Bonus: Supernova", splashSub: "Final Frenzy: 15s Countdown! Cosmic high speed balloons, keep shooting!" }
+        };
+
+        function getLevelConfig(lvl) {
+            if (LevelBlueprints[lvl]) {
+                return LevelBlueprints[lvl];
+            }
+            // Scale infinte late-game progression (Levels 11+)
+            let lateTarget = 15 + (lvl - 10) * 2;
+            let lateArrows = Math.max(12, 16 - Math.floor((lvl - 11) / 2));
+            return {
+                target: lateTarget,
+                arrows: lateArrows,
+                splashTitle: `Level ${lvl}: Deep Space Mastery`,
+                splashSub: `Fast, dense clusters. Only ${lateArrows} arrows allowed!`
+            };
+        }
+
+        function isFrenzyLevel() {
+            return currentLevel === 5 || currentLevel === 10;
+        }
+
+        function isPrecisionLevel() {
+            return currentLevel === 4 || currentLevel === 8;
+        }
+
+        // Programmatic Gradient Backgrounds Generator
+        function drawBackground() {
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+            
+            if (currentLevel <= 3) {
+                // Early Evening Theme (Warm Orange to Sunset Purple)
+                gradient.addColorStop(0, "#1c0d24"); // top
+                gradient.addColorStop(0.5, "#431245"); 
+                gradient.addColorStop(1, "#cf593a"); // horizon
+            } else if (currentLevel === 4) {
+                // Crimson Skies Title
+                gradient.addColorStop(0, "#0e0514");
+                gradient.addColorStop(0.4, "#2d0b2e");
+                gradient.addColorStop(1, "#9c1c1c");
+            } else if (currentLevel === 5) {
+                // Golden Harvest (Deep Sunset Golden Warmth)
+                gradient.addColorStop(0, "#190533");
+                gradient.addColorStop(0.5, "#4d1d56");
+                gradient.addColorStop(1, "#f39c12");
+            } else if (currentLevel >= 6 && currentLevel <= 7) {
+                // Late Twilight Theme (Dark Magenta to Teal/Royal Blue)
+                gradient.addColorStop(0, "#080312");
+                gradient.addColorStop(0.4, "#1b0d2d");
+                gradient.addColorStop(1, "#40195e");
+            } else if (currentLevel === 8) {
+                // Cobalt Eclipse
+                gradient.addColorStop(0, "#030612");
+                gradient.addColorStop(0.5, "#0b1538");
+                gradient.addColorStop(1, "#2980b9");
+            } else if (currentLevel === 9) {
+                // Nebula Drift (Space black shifting to stellar purple/pink glowing horizon)
+                gradient.addColorStop(0, "#020108");
+                gradient.addColorStop(0.5, "#15022e");
+                gradient.addColorStop(1, "#861d8a");
+            } else {
+                // Level 10+ and Infinite Deep Space Mode (Black with Twinkling Stars)
+                gradient.addColorStop(0, "#010103");
+                gradient.addColorStop(0.6, "#030310");
+                gradient.addColorStop(1, "#110b47");
+            }
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // Twinkle background stars generator for Space theme (Level 10+)
+            if (currentLevel >= 9) {
+                const now = Date.now();
+                ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+                stars.forEach(star => {
+                    // Normalize position inside viewport size
+                    const sx = star.x % canvasWidth;
+                    const sy = star.y % canvasHeight;
+                    // Calculate twinkle luminosity oscilator
+                    const twinkle = Math.sin(now * star.speed + star.phase);
+                    const drawSize = star.size * (0.6 + twinkle * 0.45);
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, drawSize, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+
+        // Bulletproof continuous spawning mechanism
+        function startSpawningLoop() {
+            if (spawnTimeoutId) {
+                clearTimeout(spawnTimeoutId);
+                spawnTimeoutId = null;
+            }
+
+            // Spawn the first balloon instantly on frame 1
+            spawnBalloon();
+
+            // Self-repeating recursive ticks
+            function spawnTick() {
+                if (gameState !== "playing" || levelSplashActive) return;
+
+                const isRoomForMore = isFrenzyLevel() || (balloonsPoppedInLevel < currentLevelTarget);
+                if (isRoomForMore) {
+                    spawnBalloon();
+                }
+
+                // Generates consecutive balloons every 800ms to 1200ms dynamically
+                const randomDelay = Math.random() * 400 + 800; // 800ms - 1200ms
+                spawnTimeoutId = setTimeout(spawnTick, randomDelay);
+            }
+
+            // Schedule the continuous sequence
+            const initialDelay = Math.random() * 400 + 800;
+            spawnTimeoutId = setTimeout(spawnTick, initialDelay);
+        }
+
+        function stopSpawning() {
+            if (spawnTimeoutId) {
+                clearTimeout(spawnTimeoutId);
+                spawnTimeoutId = null;
+            }
+        }
+
+        function spawnBalloon() {
+            let colors = ["#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#9b59b6", "#eed202"];
+            let chosenColor = colors[Math.floor(Math.random() * colors.length)];
+            let colorType = "other";
+
+            // Configure target properties depending on active Level specifications
+            if (currentLevel === 4) {
+                // Crimson Precision: ~60% Red
+                if (Math.random() < 0.6) {
+                    chosenColor = "#ff4757";
+                    colorType = "red";
+                } else {
+                    let nonReds = ["#2ed573", "#1e90ff", "#ffa502", "#e056fd", "#eed202"];
+                    chosenColor = nonReds[Math.floor(Math.random() * nonReds.length)];
+                }
+            } else if (currentLevel === 8) {
+                // Cobalt Precision: ~60% Blue
+                if (Math.random() < 0.6) {
+                    chosenColor = "#1e90ff";
+                    colorType = "blue";
+                } else {
+                    let nonBlues = ["#ff4757", "#2ed573", "#ffa502", "#e056fd", "#eed202"];
+                    chosenColor = nonBlues[Math.floor(Math.random() * nonBlues.length)];
+                }
+            } else if (isFrenzyLevel()) {
+                // Golden Harvest or Supernova Golden balloons
+                chosenColor = "#ffd700";
+                colorType = "gold";
+            } else {
+                // Normal Levels, tag red and blue for standard matching properties
+                if (chosenColor === "#ff4757") colorType = "red";
+                else if (chosenColor === "#1e90ff") colorType = "blue";
+            }
+
+            // Radius scales dynamically based on width of screen
+            const radiusX = Math.random() * 5 + 18 + (canvasWidth < 450 ? 2 : 4);
+            const radiusY = radiusX * 1.3;
+            
+            // Random horizontal positioning avoiding boundaries
+            const x = Math.random() * (canvasWidth - radiusX * 3) + radiusX * 1.5;
+            const y = canvasHeight + radiusY + 30; // Position start safe below margin
+
+            // Configure motion velocities based on Level characteristics
+            let speed = Math.random() * 1.2 + 1.2;
+            let weaveSpeed = 0;
+            let weaveAmp = 0;
+
+            if (currentLevel === 1) {
+                speed = Math.random() * 0.6 + 0.9; // Slow warm up speed
+            } else if (currentLevel === 2) {
+                speed = Math.random() * 0.9 + 1.3;
+                weaveSpeed = Math.random() * 0.01 + 0.01;
+                weaveAmp = Math.random() * 10 + 5;
+            } else if (currentLevel === 3) {
+                speed = Math.random() * 1.1 + 1.5;
+                weaveSpeed = Math.random() * 0.02 + 0.01;
+                weaveAmp = Math.random() * 15 + 10;
+            } else if (currentLevel === 4) {
+                speed = Math.random() * 1.3 + 1.4;
+            } else if (currentLevel === 5) {
+                // Golden frenzy balloons flow rapidly vertical
+                speed = Math.random() * 2.2 + 2.0;
+            } else if (currentLevel >= 6 && currentLevel <= 7) {
+                speed = Math.random() * 1.8 + 1.8;
+                weaveSpeed = Math.random() * 0.03 + 0.02;
+                weaveAmp = Math.random() * 25 + 12;
+            } else if (currentLevel === 8) {
+                speed = Math.random() * 1.6 + 1.6;
+            } else if (currentLevel === 9) {
+                speed = Math.random() * 1.5 + 1.8;
+                weaveSpeed = Math.random() * 0.05 + 0.02; // ultra zigzag
+                weaveAmp = Math.random() * 38 + 15;
+            } else if (currentLevel === 10) {
+                speed = Math.random() * 2.8 + 2.2;
+                weaveSpeed = Math.random() * 0.04 + 0.02;
+                weaveAmp = Math.random() * 30 + 10;
+            } else {
+                // Infinite scaling
+                speed = Math.random() * 2.0 + 1.8 + (currentLevel - 11) * 0.1;
+                weaveSpeed = Math.random() * 0.03 + 0.02;
+                weaveAmp = Math.random() * 25 + 10;
+            }
+
+            balloons.push({
+                x: x,
+                y: y,
+                anchorX: x,
+                radiusX: radiusX,
+                radiusY: radiusY,
+                color: chosenColor,
+                colorType: colorType,
+                speed: speed,
+                waveSpeed: weaveSpeed,
+                waveAmp: weaveAmp,
+                phase: Math.random() * Math.PI * 2,
+                popped: false
+            });
+        }
+
+        // Programmatic Gradient and Gloss overlay balloons rendering
+        function drawBalloons() {
+            balloons.forEach(b => {
+                if (b.popped) return;
+
+                ctx.save();
+                
+                // Draw bottom thread/string
+                ctx.beginPath();
+                ctx.moveTo(b.x, b.y + b.radiusY - 2);
+                ctx.bezierCurveTo(b.x - 5, b.y + b.radiusY + 12, b.x + 8, b.y + b.radiusY + 22, b.x, b.y + b.radiusY + 34);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Draw solid color gradient representing helium shell structure
+                let grad = ctx.createRadialGradient(b.x - b.radiusX * 0.3, b.y - b.radiusY * 0.3, b.radiusX * 0.1, b.x, b.y, b.radiusY);
+                grad.addColorStop(0, "#ffffff"); // gloss core
+                grad.addColorStop(0.2, b.color);
+                grad.addColorStop(1, adjustColorBrightness(b.color, -50)); // shade contour
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.ellipse(b.x, b.y, b.radiusX, b.radiusY, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw tiny knot at balloon base
+                ctx.fillStyle = b.color;
+                ctx.beginPath();
+                ctx.moveTo(b.x, b.y + b.radiusY - 1);
+                ctx.lineTo(b.x - 4, b.y + b.radiusY + 4);
+                ctx.lineTo(b.x + 4, b.y + b.radiusY + 4);
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw white circular gloss overlay highlights
+                ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+                ctx.beginPath();
+                ctx.ellipse(b.x - b.radiusX * 0.4, b.y - b.radiusY * 0.4, b.radiusX * 0.25, b.radiusY * 0.18, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        function adjustColorBrightness(hex, percent) {
+            let num = parseInt(hex.replace("#",""), 16),
+            amt = Math.round(2.55 * percent),
+            R = (num >> 16) + amt,
+            G = (num >> 8 & 0x00FF) + amt,
+            B = (num & 0x0000FF) + amt;
+            return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+        }
+
+        // Entity physics operations
+        function updateBalloons() {
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                let b = balloons[i];
+                
+                // Climb speeds
+                b.y -= b.speed;
+                
+                // Evaluate weaving trigonometric motion paths
+                if (b.waveAmp > 0) {
+                    b.phase += b.waveSpeed;
+                    b.x = b.anchorX + Math.sin(b.phase) * b.waveAmp;
+                }
+
+                // If balloon floats past top, it is 100% free!
+                if (b.y < -b.radiusY * 2) {
+                    balloons.splice(i, 1);
+                }
+            }
+        }
+
+        // Weapon controls, vector mathematics, Bow and String curves
+        function drawBow() {
+            ctx.save();
+            ctx.translate(bowX, bowY);
+            ctx.rotate(aimAngle + Math.PI / 2); // default vertical adjustment
+
+            // Base Bow configuration properties
+            const bowRadius = 55;
+            
+            // Draw wooden tension arch
+            let arcGrad = ctx.createLinearGradient(-30, 0, 30, 0);
+            arcGrad.addColorStop(0, "#8e44ad");
+            arcGrad.addColorStop(0.5, "#f39c12");
+            arcGrad.addColorStop(1, "#8e44ad");
+
+            ctx.beginPath();
+            ctx.arc(0, 0, bowRadius, Math.PI, 0, false);
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = arcGrad;
+            ctx.lineCap = "round";
+            ctx.stroke();
+
+            // Draw elastic arrow string lines
+            let stringX1 = -bowRadius;
+            let stringY1 = 0;
+            let stringX2 = bowRadius;
+            let stringY2 = 0;
+            let notchX = 0;
+            let notchY = 5; // default rest position relative to translation
+
+            if (isCharging) {
+                notchY = 32; // draw tension elastic compression pullback
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(stringX1, stringY1);
+            ctx.lineTo(notchX, notchY);
+            ctx.lineTo(stringX2, stringY2);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Draw rest arrow representation inside Bow alignment when charging
+            if (isCharging || true) {
+                ctx.beginPath();
+                // Shaft
+                ctx.moveTo(0, notchY);
+                ctx.lineTo(0, -bowRadius - 5);
+                ctx.strokeStyle = "#eccc68";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Golden arrowhead
+                ctx.fillStyle = "#ff7e5f";
+                ctx.beginPath();
+                ctx.moveTo(-6, -bowRadius - 5);
+                ctx.lineTo(6, -bowRadius - 5);
+                ctx.lineTo(0, -bowRadius - 16);
+                ctx.closePath();
+                ctx.fill();
+
+                // Fletchings
+                ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+                ctx.fillRect(-4, notchY - 4, 3, 6);
+                ctx.fillRect(1, notchY - 4, 3, 6);
+            }
+
+            ctx.restore();
+        }
+
+        // Beautiful customized, localized Target Line
+        function drawTargetingLine() {
+            if (!isCharging) return;
+
+            // Step 1: Find proximity distance of the nearest balloon in direction of path
+            let nearestBalloon = null;
+            let minDistance = Infinity;
+
+            balloons.forEach(b => {
+                if (b.popped) return;
+                // Straight scalar distance
+                const dist = Math.hypot(b.x - bowX, b.y - bowY);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestBalloon = b;
+                }
+            });
+
+            // Adjust guide length dynamically based on proximity
+            let guideLength = 150; // default base length
+            if (minDistance !== Infinity) {
+                // Adaptive guide: stretches longer for fast far snipes, shortens when balloon is close
+                guideLength = Math.max(70, Math.min(minDistance - 30, 400));
+            }
+
+            // Target vector line end position calculations
+            const endX = bowX + Math.cos(aimAngle) * guideLength;
+            const endY = bowY + Math.sin(aimAngle) * guideLength;
+
+            // Draw elegant dotted neon line
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([4, 6]);
+            ctx.moveTo(bowX, bowY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = "rgba(254, 180, 123, 0.65)";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            
+            // Draw miniature targeting reticle dot
+            ctx.beginPath();
+            ctx.arc(endX, endY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = "#feb47b";
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Active projectile arrows array calculations
+        function fireArrow() {
+            if (gameState !== "playing") return;
+
+            // Compute arrow starting velocity vectors
+            const arrowSpeed = 16 + (canvasWidth < 450 ? 2 : 4); // optimized scaling for satisfying shot speeds
+            const vx = Math.cos(aimAngle) * arrowSpeed;
+            const vy = Math.sin(aimAngle) * arrowSpeed;
+
+            arrows.push({
+                x: bowX,
+                y: bowY,
+                vx: vx,
+                vy: vy,
+                angle: aimAngle,
+                hasHit: false,
+                width: 32,
+                height: 3
+            });
+        }
+
+        function updateArrows() {
+            for (let i = arrows.length - 1; i >= 0; i--) {
+                let a = arrows[i];
+                a.x += a.vx;
+                a.y += a.vy;
+
+                // Hit detection collision tracking
+                let didHitBalloonInThisFrame = false;
+
+                for (let j = 0; j < balloons.length; j++) {
+                    let b = balloons[j];
+                    if (b.popped) continue;
+
+                    // Broad phase circle collision checks
+                    const hitboxFactor = 0.95; 
+                    const distance = Math.hypot(a.x - b.x, a.y - b.y);
+
+                    if (distance < b.radiusY * hitboxFactor) {
+                        // HIT CONFIRMED! Pop operations.
+                        b.popped = true;
+                        a.hasHit = true;
+                        didHitBalloonInThisFrame = true;
+                        
+                        balloonsPoppedInLevel++;
+                        score += 10;
+                        
+                        // Execute special rule precision logic checks
+                        if (isPrecisionLevel()) {
+                            if (currentLevel === 4) {
+                                // Level 4 MUST ONLY POP RED
+                                if (b.colorType === "red") {
+                                    score += 15; // challenge boost points
+                                } else {
+                                    // popped incorrect color, deduct one arrows chance as penalty
+                                    livesRemaining--;
+                                    score = Math.max(0, score - 25);
+                                    spawnMiniTextAlert("-1 Ammo Color Penalty!", b.x, b.y, "#ff4757");
+                                }
+                            } else if (currentLevel === 8) {
+                                // Level 8 MUST ONLY POP BLUE
+                                if (b.colorType === "blue") {
+                                    score += 15;
+                                } else {
+                                    livesRemaining--;
+                                    score = Math.max(0, score - 25);
+                                    spawnMiniTextAlert("-1 Ammo Color Penalty!", b.x, b.y, "#ff4757");
+                                }
+                            }
+                        }
+
+                        // Normal levels scores increment
+                        if (b.colorType === "gold") {
+                            score += 15; // Gold frenzy boost
+                            spawnMiniTextAlert("+25 Gold!", b.x, b.y, "#ffd700");
+                        } else {
+                            spawnMiniTextAlert("+10", b.x, b.y, b.color);
+                        }
+
+                        // Trigger visual balloon pooping fragments explosion particles
+                        createPoppedParticles(b.x, b.y, b.color);
+
+                        // Delete popped balloon
+                        balloons.splice(j, 1);
+
+                        // Auto evaluate level completions
+                        checkLevelSuccess();
+                        break;
+                    }
+                }
+
+                // If hit occurred, delete arrow immediately from flight to clean up memory
+                if (a.hasHit) {
+                    arrows.splice(i, 1);
+                    continue;
+                }
+
+                // Delete arrows traveling off-screen borders (Memory Clean Up)
+                if (a.y < -100 || a.x < -100 || a.x > canvasWidth + 100 || a.y > canvasHeight + 100) {
+                    // This was a complete miss! Player loses a chance/life only if they miss completely!
+                    if (!isFrenzyLevel()) {
+                        livesRemaining--;
+                        spawnMiniTextAlert("Missed Shot!", bowX, bowY - 120, "#ff4757");
+                        checkGameOver();
+                    }
+                    arrows.splice(i, 1);
+                }
+            }
+        }
+
+        function drawArrows() {
+            arrows.forEach(a => {
+                ctx.save();
+                ctx.translate(a.x, a.y);
+                ctx.rotate(a.angle + Math.PI / 2);
+
+                // Draw solid golden flying arrows in-flight
+                ctx.beginPath();
+                ctx.moveTo(0, 15);
+                ctx.lineTo(0, -15);
+                ctx.strokeStyle = "#eed202";
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+
+                // Accent arrowhead
+                ctx.fillStyle = "#ff4757";
+                ctx.beginPath();
+                ctx.moveTo(-5, -15);
+                ctx.lineTo(5, -15);
+                ctx.lineTo(0, -25);
+                ctx.closePath();
+                ctx.fill();
+
+                // Fletching wings
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(-3.5, 5, 2, 8);
+                ctx.fillRect(1.5, 5, 2, 8);
+
+                ctx.restore();
+            });
+        }
+
+        // Particle System (Balloons explosion and Level Celebratory Confetti fountain)
+        let alertTexts = [];
+        function spawnMiniTextAlert(text, x, y, color) {
+            alertTexts.push({
+                text: text,
+                x: x,
+                y: y,
+                alpha: 1,
+                color: color,
+                speedY: -1.2
+            });
+        }
+
+        function drawAlertTexts() {
+            for (let i = alertTexts.length - 1; i >= 0; i--) {
+                let alert = alertTexts[i];
+                alert.y += alert.speedY;
+                alert.alpha -= 0.02;
+
+                ctx.save();
+                ctx.globalAlpha = alert.alpha;
+                ctx.fillStyle = alert.color;
+                ctx.font = "bold 14px system-ui";
+                ctx.textAlign = "center";
+                ctx.fillText(alert.text, alert.x, alert.y);
+                ctx.restore();
+
+                if (alert.alpha <= 0) {
+                    alertTexts.splice(i, 1);
+                }
+            }
+        }
+
+        function createPoppedParticles(x, y, color) {
+            // Generates 15-20 bright circular balloon fragments
+            const count = Math.floor(Math.random() * 8) + 14;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 2;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1.5, // slightly upwards
+                    color: color,
+                    size: Math.random() * 4 + 2,
+                    gravity: 0.12,
+                    alpha: 1,
+                    decay: Math.random() * 0.015 + 0.012,
+                    type: "pop"
+                });
+            }
+        }
+
+        function createConfettiFountain() {
+            // Trigger beautiful vibrant cascade of ~150 fast multi-colored celebratory confetti particles
+            const colors = ["#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#e056fd", "#ffd700", "#00ffff"];
+            
+            // Left edge shoot
+            for (let i = 0; i < 70; i++) {
+                const angle = -Math.PI / 4 + (Math.random() * 0.2 - 0.1) - 0.2; // upper right trajectory
+                const speed = Math.random() * 8 + 8;
+                particles.push({
+                    x: 20,
+                    y: canvasHeight - 20,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 6 + 4,
+                    gravity: 0.15,
+                    alpha: 1,
+                    decay: Math.random() * 0.007 + 0.006, 
+                    type: "confetti"
+                });
+            }
+
+            // Right edge shoot
+            for (let i = 0; i < 70; i++) {
+                const angle = -3 * Math.PI / 4 + (Math.random() * 0.2 - 0.1) + 0.2; // upper left trajectory
+                const speed = Math.random() * 8 + 8;
+                particles.push({
+                    x: canvasWidth - 20,
+                    y: canvasHeight - 20,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 6 + 4,
+                    gravity: 0.15,
+                    alpha: 1,
+                    decay: Math.random() * 0.007 + 0.006,
+                    type: "confetti"
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.gravity;
+                p.alpha -= p.decay;
+
+                // Remove transparent dead objects (Aggressive Garbage Collection)
+                if (p.alpha <= 0 || p.y > canvasHeight + 10) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+
+                if (p.type === "confetti") {
+                    // Confetti is drawn as styled tilted rectangular chunks
+                    ctx.beginPath();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.alpha * Math.PI); // spin animation effect
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.5);
+                } else {
+                    // Circular bubble pop droplets
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+        }
+
+        // Live HUD status synchronization
+        function syncHUD() {
+            document.getElementById("hud-level").textContent = currentLevel < 10 ? `0${currentLevel}` : currentLevel;
+            document.getElementById("hud-popped").textContent = balloonsPoppedInLevel;
+            
+            const config = getLevelConfig(currentLevel);
+            if (isFrenzyLevel()) {
+                document.getElementById("hud-target").textContent = "∞";
+                document.getElementById("hud-ammo").textContent = "Unlimited";
+                document.getElementById("hud-time-panel").style.display = "flex";
+                document.getElementById("hud-time").textContent = `${frenzyTimeLeft}s`;
+            } else {
+                document.getElementById("hud-target").textContent = config.target;
+                document.getElementById("hud-ammo").textContent = livesRemaining;
+                document.getElementById("hud-time-panel").style.display = "none";
+            }
+        }
+
+        // System Level Transitions & High score checking logic
+        function loadLevel(lvl) {
+            currentLevel = lvl;
+            const config = getLevelConfig(lvl);
+            
+            balloonsPoppedInLevel = 0;
+            currentLevelTarget = config.target;
+            livesRemaining = config.arrows;
+
+            balloons = [];
+            arrows = [];
+            particles = [];
+            alertTexts = [];
+
+            // Reset frenzy timers if active
+            stopFrenzyTimer();
+
+            // Set Level splash screen overlay to display title cards exactly 1.5s
+            levelSplashActive = true;
+            levelSplashStartTime = Date.now();
+            levelTitleText = config.splashTitle;
+            levelSubtitleText = config.splashSub;
+
+            syncHUD();
+            stopSpawning();
+        }
+
+        function startFrenzyTimer() {
+            frenzyTimeLeft = 15;
+            timerActive = true;
+            syncHUD();
+
+            frenzyTimerInterval = setInterval(() => {
+                if (gameState !== "playing" || levelSplashActive) return;
+                
+                frenzyTimeLeft--;
+                syncHUD();
+
+                if (frenzyTimeLeft <= 0) {
+                    stopFrenzyTimer();
+                    // Successfully survived timed frenzy round! Proceed to next level.
+                    triggerLevelClearCelebration();
+                }
+            }, 1000);
+        }
+
+        function stopFrenzyTimer() {
+            timerActive = false;
+            if (frenzyTimerInterval) {
+                clearInterval(frenzyTimerInterval);
+                frenzyTimerInterval = null;
+            }
+        }
+
+        function triggerLevelClearCelebration() {
+            // Play confetti
+            createConfettiFountain();
+            
+            gameState = "splash"; // temporary block gameplay inputs
+            stopSpawning();
+
+            // Settle short timeline delay before loading the consecutive splash title card
+            setTimeout(() => {
+                const nextLvl = currentLevel + 1;
+                if (nextLvl > 10) {
+                    // Finished Level 10 Campaign, reveal victory overlay screen
+                    showVictoryOverlay();
+                } else {
+                    // Progress to next Level immediately
+                    gameState = "playing";
+                    loadLevel(nextLvl);
+                }
+            }, 1200); // Wait for confetti fountain display
+        }
+
+        function checkLevelSuccess() {
+            if (isFrenzyLevel()) return; // Frenzy rounds ignore target limits, handled by timer countdown
+
+            if (balloonsPoppedInLevel >= currentLevelTarget) {
+                triggerLevelClearCelebration();
+            }
+        }
+
+        function checkGameOver() {
+            if (livesRemaining <= 0) {
+                gameState = "gameover";
+                stopSpawning();
+                stopFrenzyTimer();
+
+                document.getElementById("game-over-level").textContent = currentLevel;
+                document.getElementById("game-over-score").textContent = score;
+
+                const overlay = document.getElementById("game-over-screen");
+                overlay.classList.remove("hidden");
+            }
+        }
+
+        function showVictoryOverlay() {
+            gameState = "victory";
+            stopSpawning();
+            stopFrenzyTimer();
+
+            document.getElementById("victory-score").textContent = score;
+            document.getElementById("victory-screen").classList.remove("hidden");
+        }
+
+        // Drawing custom text/shapes level splash directly on Canvas for high performance syncing
+        function drawLevelSplash() {
+            if (!levelSplashActive) return;
+
+            const timePassed = Date.now() - levelSplashStartTime;
+            
+            // Auto expire after 1.5 seconds (1500ms)
+            if (timePassed >= levelSplashDuration) {
+                levelSplashActive = false;
+                
+                // Immediately start game spawning logic
+                startSpawningLoop();
+                
+                // If it's a Frenzy stage, kickstart countdown
+                if (isFrenzyLevel()) {
+                    startFrenzyTimer();
+                }
+                return;
+            }
+
+            // Draw fade transparency adjustments
+            let alpha = 1;
+            if (timePassed < 250) {
+                alpha = timePassed / 250; // Fade In
+            } else if (timePassed > 1250) {
+                alpha = (levelSplashDuration - timePassed) / 250; // Fade Out
+            }
+
+            ctx.save();
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.75})`;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // Level Title Typography
+            ctx.fillStyle = `rgba(254, 180, 123, ${alpha})`;
+            ctx.font = "bold 2.1rem system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(levelTitleText, canvasWidth / 2, canvasHeight / 2 - 20);
+
+            // Subtitle Description
+            ctx.fillStyle = `rgba(209, 207, 226, ${alpha})`;
+            ctx.font = "normal 1rem system-ui, sans-serif";
+            
+            // Self split too-long descriptions for mobile boundaries
+            const subWords = levelSubtitleText.split(" ");
+            let line1 = "";
+            let line2 = "";
+            subWords.forEach(w => {
+                if (line1.length < 32) {
+                    line1 += w + " ";
+                } else {
+                    line2 += w + " ";
+                }
+            });
+
+            ctx.fillText(line1.trim(), canvasWidth / 2, canvasHeight / 2 + 25);
+            if (line2.length > 0) {
+                ctx.fillText(line2.trim(), canvasWidth / 2, canvasHeight / 2 + 50);
+            }
+
+            ctx.restore();
+        }
+
+        // Inputs Tracking Mechanics (Mouse + Complex Multi Touch compatibility pointers)
+        function updateAimPosition(x, y) {
+            touchX = x;
+            touchY = y;
+            // Angle vector angle from bow position base upwards
+            aimAngle = Math.atan2(touchY - bowY, touchX - bowX);
+            
+            // Force strict constraints to protect aiming guide limits upwards
+            const minAllowedAngle = -Math.PI * 0.96;
+            const maxAllowedAngle = -Math.PI * 0.04;
+            
+            if (aimAngle > 0) {
+                // If touching below Bow center, point upwards in that horizontal hemisphere
+                aimAngle = touchX < bowX ? minAllowedAngle : maxAllowedAngle;
+            } else {
+                aimAngle = Math.max(minAllowedAngle, Math.min(aimAngle, maxAllowedAngle));
+            }
+        }
+
+        // Canvas element actions listeners
+        canvas.addEventListener("mousedown", (e) => {
+            if (gameState !== "playing" || levelSplashActive) return;
+            const pos = inputHandlers.getMousePos(e);
+            isCharging = true;
+            updateAimPosition(pos.x, pos.y);
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (!isCharging || levelSplashActive) return;
+            const pos = inputHandlers.getMousePos(e);
+            updateAimPosition(pos.x, pos.y);
+        });
+
+        window.addEventListener("mouseup", (e) => {
+            if (!isCharging) return;
+            isCharging = false;
+            fireArrow();
+        });
+
+        // Strict high performance touch event mappings
+        canvas.addEventListener("touchstart", (e) => {
+            if (gameState !== "playing" || levelSplashActive) return;
+            e.preventDefault();
+            const pos = inputHandlers.getTouchPos(e);
+            if (pos) {
+                isCharging = true;
+                updateAimPosition(pos.x, pos.y);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener("touchmove", (e) => {
+            if (!isCharging || levelSplashActive) return;
+            e.preventDefault();
+            const pos = inputHandlers.getTouchPos(e);
+            if (pos) {
+                updateAimPosition(pos.x, pos.y);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener("touchend", (e) => {
+            if (!isCharging) return;
+            e.preventDefault();
+            isCharging = false;
+            fireArrow();
+        }, { passive: false });
+
+
+        // Main Simulation Engine loop
+        function mainLoop() {
+            // Draw gradient sky landscapes
+            drawBackground();
+
+            if (gameState === "playing" || gameState === "splash") {
+                // Update and draw live elements
+                updateBalloons();
+                updateArrows();
+                updateParticles();
+
+                drawBalloons();
+                drawArrows();
+                drawParticles();
+                
+                // Bow and guide visual aiming indicators
+                drawTargetingLine();
+                drawBow();
+                
+                drawAlertTexts();
+
+                // Direct draw level splash overlays cleanly
+                drawLevelSplash();
+            } else {
+                // Dim screen slightly when menu active
+                ctx.fillStyle = "rgba(4, 3, 8, 0.4)";
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            }
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        // Start initialization configuration
+        document.getElementById("start-btn").addEventListener("click", () => {
+            document.getElementById("start-screen").classList.add("hidden");
+            startGame();
+        });
+
+        document.getElementById("retry-btn").addEventListener("click", () => {
+            document.getElementById("game-over-screen").classList.add("hidden");
+            restartGame();
+        });
+
+        document.getElementById("replay-btn").addEventListener("click", () => {
+            document.getElementById("victory-screen").classList.add("hidden");
+            restartToInfiniteMode();
+        });
+
+        function startGame() {
+            gameState = "playing";
+            score = 0;
+            loadLevel(1);
+            syncHUD();
+        }
+
+        function restartGame() {
+            gameState = "playing";
+            score = 0;
+            loadLevel(1);
+            syncHUD();
+        }
+
+        function restartToInfiniteMode() {
+            gameState = "playing";
+            // Retain previous score boost as arcade mode progress reward, restart on Challenge level 11
+            loadLevel(11);
+            syncHUD();
+        }
+
+        // Start request animation frame loops
+        requestAnimationFrame(mainLoop);
+    </script>
+</body>
+</html>
