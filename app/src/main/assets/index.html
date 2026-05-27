@@ -278,20 +278,12 @@
                 </div>
             </div>
             
-            <!-- Right Side: Ammo / Timer Group -->
+            <!-- Right Side: Timer Group -->
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                 <!-- Time remaining panel -->
                 <div id="hud-time-panel" class="hud-panel" style="display: none; border-color: rgba(242, 184, 181, 0.4); background: rgba(242, 184, 181, 0.15);">
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span id="hud-time" class="accent-text-time" style="font-weight: 900; font-size: 1.15rem; color: #F2B8B5;">15s</span>
-                    </div>
-                </div>
-
-                <!-- Ammo / Chances indicator -->
-                <div id="hud-ammo-panel" class="hud-panel" style="border-color: rgba(242, 184, 181, 0.4); background: rgba(242, 184, 181, 0.15); padding: 8px 14px; min-width: 80px;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                        <span class="hud-label" style="margin: 0; font-size: 9px; color: rgba(255, 255, 255, 0.65);">Ammo</span>
-                        <span id="hud-ammo" class="accent-text-ammo" style="font-weight: 900; font-size: 1.15rem; color: #F2B8B5;">20</span>
                     </div>
                 </div>
             </div>
@@ -308,7 +300,7 @@
                 <div class="highlights">
                     <div class="highlight-item">
                         <span class="icon-bullet" style="background-color: #F2B8B5;"></span>
-                        <span>Missed shots consume ammo chances.</span>
+                        <span>Shoot as many arrows as you need to clear the levels!</span>
                     </div>
                     <div class="highlight-item">
                         <span class="icon-bullet" style="background-color: #D0BCFF;"></span>
@@ -329,7 +321,7 @@
         <!-- Game Over Screen Overlay -->
         <div id="game-over-screen" class="overlay hidden">
             <div class="card" style="border-color: rgba(242, 184, 181, 0.45);">
-                <h1 style="background: linear-gradient(135deg, #FF9999, #F2B8B5, #e06666); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AMMO DEPLETED</h1>
+                <h1 style="background: linear-gradient(135deg, #FF9999, #F2B8B5, #e06666); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ROUND OVER</h1>
                 <div class="tagline">Grounded at Level <span id="game-over-level">1</span></div>
                 <div class="highlights" style="text-align: center; font-size: 1.05rem;">
                     <div style="width: 100%; text-align: center;">Final Score: <strong style="color: #D0BCFF; font-size: 1.35rem;"><span id="game-over-score">0</span></strong> points</div>
@@ -347,7 +339,7 @@
                 <h1 style="background: linear-gradient(135deg, #ffffff, #D0BCFF, #8a6cd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">VICTORY DETECTED</h1>
                 <div class="tagline">Master of the Skies!</div>
                 <p class="instructions" style="background: rgba(208, 188, 255, 0.05); border-left-color: #D0BCFF; text-align: center;">
-                    You have successfully triumphed through all 10 challenge levels of Balloon Blitz! You are a legendary sky marksman!
+                    You have successfully triumphed through all 15 challenge levels of Balloon Blitz! You are a legendary sky marksman!
                 </p>
                 <div class="highlights" style="text-align: center; font-size: 1.05rem;">
                     <div style="width: 100%; text-align: center;">Total Final Score: <strong style="color: #F2B8B5; font-size: 1.35rem;"><span id="victory-score">0</span></strong> points</div>
@@ -411,17 +403,21 @@
             onStartState: () => {},
             getMousePos: (evt) => {
                 const rect = canvas.getBoundingClientRect();
+                const rw = rect.width || 1;
+                const rh = rect.height || 1;
                 return {
-                    x: (evt.clientX - rect.left) * (canvasWidth / rect.width),
-                    y: (evt.clientY - rect.top) * (canvasHeight / rect.height)
+                    x: (evt.clientX - rect.left) * (canvasWidth / rw),
+                    y: (evt.clientY - rect.top) * (canvasHeight / rh)
                 };
             },
             getTouchPos: (evt) => {
                 if (!evt.touches || evt.touches.length === 0) return null;
                 const rect = canvas.getBoundingClientRect();
+                const rw = rect.width || 1;
+                const rh = rect.height || 1;
                 return {
-                    x: (evt.touches[0].clientX - rect.left) * (canvasWidth / rect.width),
-                    y: (evt.touches[0].clientY - rect.top) * (canvasHeight / rect.height)
+                    x: (evt.touches[0].clientX - rect.left) * (canvasWidth / rw),
+                    y: (evt.touches[0].clientY - rect.top) * (canvasHeight / rh)
                 };
             }
         };
@@ -432,8 +428,8 @@
             const rect = container.getBoundingClientRect();
             
             // Layout scale configuration
-            canvasWidth = rect.width;
-            canvasHeight = rect.height;
+            canvasWidth = rect.width || window.innerWidth || 400;
+            canvasHeight = rect.height || window.innerHeight || 600;
 
             dpr = window.devicePixelRatio || 1;
             canvas.width = canvasWidth * dpr;
@@ -464,30 +460,33 @@
 
         // Level Configuration Blueprints
         const LevelBlueprints = {
-            1: { target: 5, arrows: 20, splashTitle: "Level 1: Warm-Up Round", splashSub: "Slow & steady flow. Practice your aiming guide!" },
-            2: { target: 8, arrows: 18, splashTitle: "Level 2: Twilight Valley", splashSub: "Speed slightly increased with a gentle horizontal weaving." },
-            3: { target: 10, arrows: 18, splashTitle: "Level 3: Twilight Summit", splashSub: "Advanced continuous weaves. Don't waste your chances!" },
-            4: { target: 8, arrows: 15, splashTitle: "Level 4 Challenge: Crimson Skies", splashSub: "Precision Round: Pop ONLY RED balloons. Other colors cost an arrow!" },
-            5: { target: 999, arrows: 999, splashTitle: "Level 5 Bonus: Golden Harvest", splashSub: "Frenzy Round: 15s Countdown! GOLD Balloons, rapid-fire, unlimited ammo!" },
-            6: { target: 12, arrows: 18, splashTitle: "Level 6: Midnight Summit", splashSub: "Fast speed clusters and weaving. Watch out!" },
-            7: { target: 15, arrows: 18, splashTitle: "Level 7: Starlight Ascent", splashSub: "Highly erratic and ultra speed weaves." },
-            8: { target: 10, arrows: 15, splashTitle: "Level 8 Challenge: Cobalt Eclipse", splashSub: "Precision Round: Pop ONLY BLUE balloons. Other colors cost an arrow!" },
-            9: { target: 15, arrows: 16, splashTitle: "Level 9: Nebula Drift", splashSub: "Severe custom zigzag movements. Focus your shots!" },
-            10: { target: 999, arrows: 999, splashTitle: "Level 10 Bonus: Supernova", splashSub: "Final Frenzy: 15s Countdown! Cosmic high speed balloons, keep shooting!" }
+            1: { target: 5, splashTitle: "Level 1: Warm-Up Round", splashSub: "Slow & steady flow. Practice your aiming guide!" },
+            2: { target: 8, splashTitle: "Level 2: Twilight Valley", splashSub: "Speed slightly increased with a gentle horizontal weaving." },
+            3: { target: 10, splashTitle: "Level 3: Twilight Summit", splashSub: "Advanced continuous weaves." },
+            4: { target: 8, splashTitle: "Level 4 Challenge: Crimson Skies", splashSub: "Precision Round: Pop ONLY RED balloons. Other colors deduct points!" },
+            5: { target: 999, splashTitle: "Level 5 Bonus: Golden Harvest", splashSub: "Frenzy Round: 15s Countdown! GOLD Balloons, rapid-fire!" },
+            6: { target: 12, splashTitle: "Level 6: Midnight Summit", splashSub: "Fast speed clusters and weaving. Watch out!" },
+            7: { target: 15, splashTitle: "Level 7: Starlight Ascent", splashSub: "Highly erratic and ultra speed weaves." },
+            8: { target: 10, splashTitle: "Level 8 Challenge: Cobalt Eclipse", splashSub: "Precision Round: Pop ONLY BLUE balloons. Other colors deduct points!" },
+            9: { target: 15, splashTitle: "Level 9: Nebula Drift", splashSub: "Severe custom zigzag movements. Focus your shots!" },
+            10: { target: 999, splashTitle: "Level 10 Bonus: Supernova", splashSub: "Final Frenzy: 15s Countdown! Cosmic high speed balloons, keep shooting!" },
+            11: { target: 18, splashTitle: "Level 11: Celestial Drift", splashSub: "Vibrant pastel balloons weaving inside cosmic winds!" },
+            12: { target: 15, splashTitle: "Level 12 Challenge: Stardust Eclipse", splashSub: "Precision Round: Pop ONLY GOLD balloons. Other colors deduct points!" },
+            13: { target: 20, splashTitle: "Level 13: Solar Flare", splashSub: "High speed, ultra fast rising balloons. Stay alert!" },
+            14: { target: 22, splashTitle: "Level 14: Nebula Vortex", splashSub: "Weaving chaos! Erratically flying balloons at high speeds." },
+            15: { target: 25, splashTitle: "Level 15: Cosmic Finale", splashSub: "The ultimate pop festival! Blast through the final wave of cosmic balloons!" }
         };
 
         function getLevelConfig(lvl) {
             if (LevelBlueprints[lvl]) {
                 return LevelBlueprints[lvl];
             }
-            // Scale infinte late-game progression (Levels 11+)
-            let lateTarget = 15 + (lvl - 10) * 2;
-            let lateArrows = Math.max(12, 16 - Math.floor((lvl - 11) / 2));
+            // Scale infinite late-game progression (Levels 16+)
+            let lateTarget = 20 + (lvl - 15) * 2;
             return {
                 target: lateTarget,
-                arrows: lateArrows,
-                splashTitle: `Level ${lvl}: Deep Space Mastery`,
-                splashSub: `Fast, dense clusters. Only ${lateArrows} arrows allowed!`
+                splashTitle: `Level ${lvl}: Cosmic Mastery`,
+                splashSub: `Fast, dense clusters. Deep space challenge!`
             };
         }
 
@@ -496,7 +495,7 @@
         }
 
         function isPrecisionLevel() {
-            return currentLevel === 4 || currentLevel === 8;
+            return currentLevel === 4 || currentLevel === 8 || currentLevel === 12;
         }
 
         // Programmatic Gradient Backgrounds Generator
@@ -533,8 +532,23 @@
                 gradient.addColorStop(0, "#020108");
                 gradient.addColorStop(0.5, "#15022e");
                 gradient.addColorStop(1, "#861d8a");
+            } else if (currentLevel === 11 || currentLevel === 12) {
+                // Celestial / Nebula Purples & Dark Teal
+                gradient.addColorStop(0, "#09031a");
+                gradient.addColorStop(0.5, "#1f093d");
+                gradient.addColorStop(1, "#124e5c");
+            } else if (currentLevel === 13 || currentLevel === 14) {
+                // Solar Golden-Red & Orange theme
+                gradient.addColorStop(0, "#190306");
+                gradient.addColorStop(0.5, "#4c0c13");
+                gradient.addColorStop(1, "#cf5f1b");
+            } else if (currentLevel === 15) {
+                // Cosmic violet gradient
+                gradient.addColorStop(0, "#010103");
+                gradient.addColorStop(0.6, "#0c051a");
+                gradient.addColorStop(1, "#491061");
             } else {
-                // Level 10+ and Infinite Deep Space Mode (Black with Twinkling Stars)
+                // Level 16+ and Infinite Deep Space Mode (Black with Twinkling Stars)
                 gradient.addColorStop(0, "#010103");
                 gradient.addColorStop(0.6, "#030310");
                 gradient.addColorStop(1, "#110b47");
@@ -621,6 +635,15 @@
                     let nonBlues = ["#ff4757", "#2ed573", "#ffa502", "#e056fd", "#eed202"];
                     chosenColor = nonBlues[Math.floor(Math.random() * nonBlues.length)];
                 }
+            } else if (currentLevel === 12) {
+                // Stardust Gold Precision: ~60% Gold
+                if (Math.random() < 0.6) {
+                    chosenColor = "#ffd700";
+                    colorType = "gold";
+                } else {
+                    let nonGolds = ["#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#e056fd"];
+                    chosenColor = nonGolds[Math.floor(Math.random() * nonGolds.length)];
+                }
             } else if (isFrenzyLevel()) {
                 // Golden Harvest or Supernova Golden balloons
                 chosenColor = "#ffd700";
@@ -673,9 +696,25 @@
                 speed = Math.random() * 2.8 + 2.2;
                 weaveSpeed = Math.random() * 0.04 + 0.02;
                 weaveAmp = Math.random() * 30 + 10;
+            } else if (currentLevel === 11) {
+                speed = Math.random() * 1.5 + 1.5;
+                weaveSpeed = Math.random() * 0.025 + 0.015;
+                weaveAmp = Math.random() * 20 + 10;
+            } else if (currentLevel === 12) {
+                speed = Math.random() * 1.5 + 1.6;
+            } else if (currentLevel === 13) {
+                speed = Math.random() * 2.5 + 2.0;
+            } else if (currentLevel === 14) {
+                speed = Math.random() * 2.0 + 1.8;
+                weaveSpeed = Math.random() * 0.045 + 0.025;
+                weaveAmp = Math.random() * 35 + 15;
+            } else if (currentLevel === 15) {
+                speed = Math.random() * 2.6 + 2.0;
+                weaveSpeed = Math.random() * 0.035 + 0.02;
+                weaveAmp = Math.random() * 25 + 12;
             } else {
                 // Infinite scaling
-                speed = Math.random() * 2.0 + 1.8 + (currentLevel - 11) * 0.1;
+                speed = Math.random() * 2.0 + 1.8 + (currentLevel - 16) * 0.1;
                 weaveSpeed = Math.random() * 0.03 + 0.02;
                 weaveAmp = Math.random() * 25 + 10;
             }
@@ -765,7 +804,7 @@
                 }
 
                 // If balloon floats past top, it is 100% free!
-                if (b.y < -b.radiusY * 2) {
+                if (isNaN(b.x) || isNaN(b.y) || b.y < -b.radiusY * 2) {
                     balloons.splice(i, 1);
                 }
             }
@@ -891,6 +930,7 @@
         // Active projectile arrows array calculations
         function fireArrow() {
             if (gameState !== "playing") return;
+            if (isNaN(aimAngle) || !isFinite(aimAngle)) return;
 
             // Compute arrow starting velocity vectors
             const arrowSpeed = 16 + (canvasWidth < 450 ? 2 : 4); // optimized scaling for satisfying shot speeds
@@ -932,39 +972,51 @@
                         a.hasHit = true;
                         didHitBalloonInThisFrame = true;
                         
-                        balloonsPoppedInLevel++;
-                        score += 10;
+                        let isCorrectPop = true;
+                        let popScoreAward = 10;
                         
                         // Execute special rule precision logic checks
                         if (isPrecisionLevel()) {
                             if (currentLevel === 4) {
                                 // Level 4 MUST ONLY POP RED
                                 if (b.colorType === "red") {
-                                    score += 15; // challenge boost points
+                                    popScoreAward += 15; // challenge boost points
                                 } else {
-                                    // popped incorrect color, deduct one arrows chance as penalty
-                                    livesRemaining--;
-                                    score = Math.max(0, score - 25);
-                                    spawnMiniTextAlert("-1 Ammo Color Penalty!", b.x, b.y, "#ff4757");
+                                    isCorrectPop = false;
+                                    score = Math.max(0, score - 20);
+                                    spawnMiniTextAlert("Wrong color! -20", b.x, b.y, "#ff4757");
                                 }
                             } else if (currentLevel === 8) {
                                 // Level 8 MUST ONLY POP BLUE
                                 if (b.colorType === "blue") {
-                                    score += 15;
+                                    popScoreAward += 15;
                                 } else {
-                                    livesRemaining--;
-                                    score = Math.max(0, score - 25);
-                                    spawnMiniTextAlert("-1 Ammo Color Penalty!", b.x, b.y, "#ff4757");
+                                    isCorrectPop = false;
+                                    score = Math.max(0, score - 20);
+                                    spawnMiniTextAlert("Wrong color! -20", b.x, b.y, "#ff4757");
+                                }
+                            } else if (currentLevel === 12) {
+                                // Level 12 MUST ONLY POP GOLD
+                                if (b.colorType === "gold") {
+                                    popScoreAward += 15;
+                                } else {
+                                    isCorrectPop = false;
+                                    score = Math.max(0, score - 20);
+                                    spawnMiniTextAlert("Wrong color! -20", b.x, b.y, "#ff4757");
                                 }
                             }
+                        } else if (b.colorType === "gold") {
+                            popScoreAward += 15; // Gold frenzy boost
                         }
 
-                        // Normal levels scores increment
-                        if (b.colorType === "gold") {
-                            score += 15; // Gold frenzy boost
-                            spawnMiniTextAlert("+25 Gold!", b.x, b.y, "#ffd700");
-                        } else {
-                            spawnMiniTextAlert("+10", b.x, b.y, b.color);
+                        if (isCorrectPop) {
+                            balloonsPoppedInLevel++;
+                            score += popScoreAward;
+                            if (b.colorType === "gold") {
+                                spawnMiniTextAlert("+25 Gold!", b.x, b.y, "#ffd700");
+                            } else {
+                                spawnMiniTextAlert(`+${popScoreAward}`, b.x, b.y, b.color);
+                            }
                         }
 
                         // Trigger visual balloon pooping fragments explosion particles
@@ -972,6 +1024,9 @@
 
                         // Delete popped balloon
                         balloons.splice(j, 1);
+
+                        // Sync score and target changes
+                        syncHUD();
 
                         // Auto evaluate level completions
                         checkLevelSuccess();
@@ -986,13 +1041,7 @@
                 }
 
                 // Delete arrows traveling off-screen borders (Memory Clean Up)
-                if (a.y < -100 || a.x < -100 || a.x > canvasWidth + 100 || a.y > canvasHeight + 100) {
-                    // This was a complete miss! Player loses a chance/life only if they miss completely!
-                    if (!isFrenzyLevel()) {
-                        livesRemaining--;
-                        spawnMiniTextAlert("Missed Shot!", bowX, bowY - 120, "#ff4757");
-                        checkGameOver();
-                    }
+                if (isNaN(a.x) || isNaN(a.y) || a.y < -100 || a.x < -100 || a.x > canvasWidth + 100 || a.y > canvasHeight + 100) {
                     arrows.splice(i, 1);
                 }
             }
@@ -1134,7 +1183,7 @@
                 p.alpha -= p.decay;
 
                 // Remove transparent dead objects (Aggressive Garbage Collection)
-                if (p.alpha <= 0 || p.y > canvasHeight + 10) {
+                if (isNaN(p.x) || isNaN(p.y) || p.alpha <= 0 || p.y > canvasHeight + 10) {
                     particles.splice(i, 1);
                 }
             }
@@ -1165,29 +1214,27 @@
         // Live HUD status synchronization
         function syncHUD() {
             document.getElementById("hud-level").textContent = currentLevel < 10 ? `0${currentLevel}` : currentLevel;
-            document.getElementById("hud-popped").textContent = balloonsPoppedInLevel;
+            document.getElementById("hud-popped").textContent = score; // Display actual accumulated score
             
-            const config = getLevelConfig(currentLevel);
             if (isFrenzyLevel()) {
                 document.getElementById("hud-target").textContent = "∞";
-                document.getElementById("hud-ammo").textContent = "Unlimited";
                 document.getElementById("hud-time-panel").style.display = "flex";
                 document.getElementById("hud-time").textContent = `${frenzyTimeLeft}s`;
             } else {
-                document.getElementById("hud-target").textContent = config.target;
-                document.getElementById("hud-ammo").textContent = livesRemaining;
+                const remaining = Math.max(0, currentLevelTarget - balloonsPoppedInLevel);
+                document.getElementById("hud-target").textContent = remaining;
                 document.getElementById("hud-time-panel").style.display = "none";
             }
         }
 
         // System Level Transitions & High score checking logic
         function loadLevel(lvl) {
+            if (isNaN(lvl) || lvl <= 0) lvl = 1;
             currentLevel = lvl;
             const config = getLevelConfig(lvl);
             
             balloonsPoppedInLevel = 0;
             currentLevelTarget = config.target;
-            livesRemaining = config.arrows;
 
             balloons = [];
             arrows = [];
@@ -1244,8 +1291,8 @@
             // Settle short timeline delay before loading the consecutive splash title card
             setTimeout(() => {
                 const nextLvl = currentLevel + 1;
-                if (nextLvl > 10) {
-                    // Finished Level 10 Campaign, reveal victory overlay screen
+                if (nextLvl > 15) {
+                    // Finished Level 15 Campaign, reveal victory overlay screen
                     showVictoryOverlay();
                 } else {
                     // Progress to next Level immediately
@@ -1350,10 +1397,13 @@
 
         // Inputs Tracking Mechanics (Mouse + Complex Multi Touch compatibility pointers)
         function updateAimPosition(x, y) {
+            if (isNaN(x) || isNaN(y)) return;
             touchX = x;
             touchY = y;
             // Angle vector angle from bow position base upwards
-            aimAngle = Math.atan2(touchY - bowY, touchX - bowX);
+            let newAngle = Math.atan2(touchY - bowY, touchX - bowX);
+            if (isNaN(newAngle) || !isFinite(newAngle)) return;
+            aimAngle = newAngle;
             
             // Force strict constraints to protect aiming guide limits upwards
             const minAllowedAngle = -Math.PI * 0.96;
@@ -1390,7 +1440,7 @@
         // Strict high performance touch event mappings
         canvas.addEventListener("touchstart", (e) => {
             if (gameState !== "playing" || levelSplashActive) return;
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             const pos = inputHandlers.getTouchPos(e);
             if (pos) {
                 isCharging = true;
@@ -1400,7 +1450,7 @@
 
         canvas.addEventListener("touchmove", (e) => {
             if (!isCharging || levelSplashActive) return;
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             const pos = inputHandlers.getTouchPos(e);
             if (pos) {
                 updateAimPosition(pos.x, pos.y);
@@ -1409,7 +1459,7 @@
 
         canvas.addEventListener("touchend", (e) => {
             if (!isCharging) return;
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             isCharging = false;
             fireArrow();
         }, { passive: false });
